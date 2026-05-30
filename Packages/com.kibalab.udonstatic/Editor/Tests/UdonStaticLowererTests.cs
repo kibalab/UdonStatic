@@ -165,6 +165,38 @@ namespace Example
         }
 
         [Test]
+        public void ColumnLayoutShrinksToAvailableWidthWithoutZeroWidthColumns()
+        {
+            var widths = new[] { 200f, 100f, 100f };
+            float availableWidth = 140f;
+
+            float[] drawWidths = UdonStaticColumnLayout.GetDrawWidths(widths, availableWidth);
+
+            foreach (float width in drawWidths)
+            {
+                Assert.That(width, Is.GreaterThanOrEqualTo(UdonStaticColumnLayout.MinDrawColumnWidth));
+            }
+
+            Assert.That(UdonStaticColumnLayout.GetTotalWidth(drawWidths), Is.LessThanOrEqualTo(availableWidth).Within(0.001f));
+        }
+
+        [Test]
+        public void ColumnLayoutDoesNotRequireMinimumComponentWidth()
+        {
+            var widths = new[] { 200f, 100f, 100f };
+            float availableWidth = 24f;
+
+            float[] drawWidths = UdonStaticColumnLayout.GetDrawWidths(widths, availableWidth);
+
+            foreach (float width in drawWidths)
+            {
+                Assert.That(width, Is.GreaterThan(0f));
+            }
+
+            Assert.That(UdonStaticColumnLayout.GetTotalWidth(drawWidths), Is.LessThanOrEqualTo(availableWidth).Within(0.001f));
+        }
+
+        [Test]
         public void StoreFieldRowSplitsQualifiedNameForInspector()
         {
             UdonStaticStoreFieldRow row = UdonStaticStoreFieldRow.FromQualifiedName(

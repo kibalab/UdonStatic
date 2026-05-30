@@ -215,6 +215,7 @@ namespace K13A.UdonStatic.Editor
     internal static class UdonStaticColumnLayout
     {
         public const float MinColumnWidth = 48f;
+        public const float MinDrawColumnWidth = 12f;
         public const float SplitterWidth = 6f;
 
         public static Rect GetColumnRect(Rect rowRect, float[] columnWidths, int column)
@@ -242,6 +243,30 @@ namespace K13A.UdonStatic.Editor
         public static float[] GetDrawWidths(float[] columnWidths, float availableWidth)
         {
             float[] drawWidths = columnWidths.ToArray();
+            if (drawWidths.Length == 0)
+                return drawWidths;
+
+            float splitterWidth = SplitterWidth * Mathf.Max(0, drawWidths.Length - 1);
+            float availableColumnWidth = Mathf.Max(0.001f * drawWidths.Length, availableWidth - splitterWidth);
+            float minimumDrawColumnWidth = Mathf.Min(MinDrawColumnWidth, availableColumnWidth / drawWidths.Length);
+            float storedColumnWidth = drawWidths.Sum();
+
+            if (storedColumnWidth > availableColumnWidth && storedColumnWidth > 0f)
+            {
+                float minimumTotalWidth = minimumDrawColumnWidth * drawWidths.Length;
+                float flexibleWidth = Mathf.Max(0f, availableColumnWidth - minimumTotalWidth);
+                float storedFlexibleWidth = drawWidths.Sum(width => Mathf.Max(0f, width - minimumDrawColumnWidth));
+
+                for (var i = 0; i < drawWidths.Length; i++)
+                {
+                    float weight = storedFlexibleWidth > 0f
+                        ? Mathf.Max(0f, drawWidths[i] - minimumDrawColumnWidth) / storedFlexibleWidth
+                        : 1f / drawWidths.Length;
+
+                    drawWidths[i] = minimumDrawColumnWidth + flexibleWidth * weight;
+                }
+            }
+
             float extraWidth = availableWidth - GetTotalWidth(drawWidths);
             if (extraWidth > 0f && drawWidths.Length > 0)
             {

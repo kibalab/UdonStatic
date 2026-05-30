@@ -152,6 +152,22 @@ namespace Example
         }
 
         [Test]
+        public void StoreFieldRowSplitsQualifiedNameForInspector()
+        {
+            UdonStaticStoreFieldRow row = UdonStaticStoreFieldRow.FromQualifiedName(
+                "Example.Nested.TestBehaviour.Score",
+                "int",
+                "IntData",
+                3);
+
+            Assert.That(row.FullClassName, Is.EqualTo("Example.Nested.TestBehaviour"));
+            Assert.That(row.Name, Is.EqualTo("Score"));
+            Assert.That(row.TypeName, Is.EqualTo("int"));
+            Assert.That(row.StorageName, Is.EqualTo("IntData"));
+            Assert.That(row.Slot, Is.EqualTo(3));
+        }
+
+        [Test]
         public void GlobalStoreSerializedStorageFieldsAreHiddenInInspector()
         {
             var fields = typeof(UdonStaticGlobalStore).GetFields();

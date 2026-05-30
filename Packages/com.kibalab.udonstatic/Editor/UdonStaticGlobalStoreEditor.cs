@@ -1,5 +1,8 @@
+using System;
+using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
+using System.Reflection;
 using K13A.UdonStatic.Runtime;
 using UnityEditor;
 using UnityEngine;
@@ -17,8 +20,7 @@ namespace K13A.UdonStatic.Editor
         private static readonly string[] ColumnNames = { "Class", "Field", "Type", "Storage", "Slot" };
         private static readonly float[] DefaultColumnWidths = { 360f, 140f, 120f, 110f, 48f };
 
-        private Vector2 _scroll;
-        private StaticFieldCatalog _catalog;
+        private IReadOnlyList<UdonStaticStoreFieldRow> _rows;
         private float[] _columnWidths;
         private int _resizingColumn = -1;
         private float _resizeStartX;
@@ -27,7 +29,7 @@ namespace K13A.UdonStatic.Editor
         private void OnEnable()
         {
             _columnWidths = LoadColumnWidths();
-            RefreshCatalog();
+            RefreshRows();
         }
 
         private void OnDisable()
@@ -49,43 +51,46 @@ namespace K13A.UdonStatic.Editor
                 if (GUILayout.Button("Sync From Project Sources"))
                 {
                     UdonStaticSceneStoreUtility.SyncFromProjectSources();
-                    RefreshCatalog();
+                    RefreshRows();
                 }
 
                 if (GUILayout.Button("Refresh"))
                 {
-                    RefreshCatalog();
+                    RefreshRows();
                 }
             }
 
             EditorGUILayout.Space();
-            _catalog ??= UdonStaticSceneStoreUtility.CollectProjectCatalog();
-            EditorGUILayout.LabelField($"Declared Static Fields ({_catalog.Count})", EditorStyles.boldLabel);
+            _rows ??= UdonStaticStoreViewModel.BuildRows((UdonStaticGlobalStore)target);
+            EditorGUILayout.LabelField($"Declared Static Fields ({_rows.Count})", EditorStyles.boldLabel);
 
-            if (_catalog.Count == 0)
+            if (_rows.Count == 0)
             {
                 EditorGUILayout.HelpBox("No UdonStatic fields were found in UdonSharpBehaviour sources.", MessageType.None);
                 return;
             }
 
-            _scroll = EditorGUILayout.BeginScrollView(_scroll, true, true, GUILayout.MinHeight(MinListHeight));
             float tableWidth = UdonStaticColumnLayout.GetTotalWidth(_columnWidths);
 
             Rect headerRect = GUILayoutUtility.GetRect(tableWidth, HeaderHeight, GUILayout.ExpandWidth(false));
             DrawHeader(headerRect);
 
-            foreach (var field in _catalog.Fields.OrderBy(static field => field.QualifiedName))
+            foreach (var field in _rows.OrderBy(static field => field.QualifiedName))
             {
                 Rect rowRect = GUILayoutUtility.GetRect(tableWidth, RowHeight, GUILayout.ExpandWidth(false));
                 DrawFieldRow(rowRect, field);
             }
 
-            EditorGUILayout.EndScrollView();
+            float usedHeight = HeaderHeight + _rows.Count * RowHeight;
+            if (usedHeight < MinListHeight)
+            {
+                GUILayout.Space(MinListHeight - usedHeight);
+            }
         }
 
-        private void RefreshCatalog()
+        private void RefreshRows()
         {
-            _catalog = UdonStaticSceneStoreUtility.CollectProjectCatalog();
+            _rows = UdonStaticStoreViewModel.BuildRows((UdonStaticGlobalStore)target);
             Repaint();
         }
 
@@ -141,7 +146,7 @@ namespace K13A.UdonStatic.Editor
             }
         }
 
-        private void DrawFieldRow(Rect rowRect, StaticFieldInfo field)
+        private void DrawFieldRow(Rect rowRect, UdonStaticStoreFieldRow field)
         {
             if (Event.current.type == EventType.Repaint && rowRect.Contains(Event.current.mousePosition))
             {
@@ -151,7 +156,7 @@ namespace K13A.UdonStatic.Editor
             DrawCell(UdonStaticColumnLayout.GetColumnRect(rowRect, _columnWidths, 0), field.FullClassName);
             DrawCell(UdonStaticColumnLayout.GetColumnRect(rowRect, _columnWidths, 1), field.Name);
             DrawCell(UdonStaticColumnLayout.GetColumnRect(rowRect, _columnWidths, 2), field.TypeName);
-            DrawCell(UdonStaticColumnLayout.GetColumnRect(rowRect, _columnWidths, 3), field.Storage.ArrayName);
+            DrawCell(UdonStaticColumnLayout.GetColumnRect(rowRect, _columnWidths, 3), field.StorageName);
             DrawCell(UdonStaticColumnLayout.GetColumnRect(rowRect, _columnWidths, 4), field.Slot.ToString());
         }
 
@@ -236,6 +241,92 @@ namespace K13A.UdonStatic.Editor
         public static float GetTotalWidth(float[] columnWidths)
         {
             return columnWidths.Sum() + SplitterWidth * (columnWidths.Length - 1);
+        }
+    }
+
+    internal static class UdonStaticStoreViewModel
+    {
+        public static IReadOnlyList<UdonStaticStoreFieldRow> BuildRows(UdonStaticGlobalStore store)
+        {
+            if (store == null)
+                return new List<UdonStaticStoreFieldRow>();
+
+            var rows = new List<UdonStaticStoreFieldRow>();
+            FieldInfo[] fields = typeof(UdonStaticGlobalStore).GetFields(BindingFlags.Instance | BindingFlags.Public);
+
+            foreach (FieldInfo dataField in fields.Where(static field => field.Name.EndsWith("Data")))
+            {
+                FieldInfo keyField = typeof(UdonStaticGlobalStore).GetField(dataField.Name.Replace("Data", "Keys"));
+                if (keyField == null)
+                    continue;
+
+                var keys = keyField.GetValue(store) as string[];
+                if (keys == null)
+                    continue;
+
+                string typeName = TypeNameForDataField(dataField);
+                for (var i = 0; i < keys.Length; i++)
+                {
+                    if (string.IsNullOrEmpty(keys[i]))
+                        continue;
+
+                    rows.Add(UdonStaticStoreFieldRow.FromQualifiedName(keys[i], typeName, dataField.Name, i));
+                }
+            }
+
+            return rows;
+        }
+
+        private static string TypeNameForDataField(FieldInfo dataField)
+        {
+            Type elementType = dataField.FieldType.IsArray
+                ? dataField.FieldType.GetElementType()
+                : dataField.FieldType;
+
+            if (elementType == typeof(int)) return "int";
+            if (elementType == typeof(float)) return "float";
+            if (elementType == typeof(bool)) return "bool";
+            if (elementType == typeof(string)) return "string";
+            if (elementType == typeof(long)) return "long";
+            if (elementType == typeof(double)) return "double";
+            if (elementType == typeof(UnityEngine.Object)) return "Object";
+
+            return elementType != null ? elementType.Name : dataField.Name.Replace("Data", string.Empty);
+        }
+    }
+
+    internal sealed class UdonStaticStoreFieldRow
+    {
+        private UdonStaticStoreFieldRow(string fullClassName, string name, string qualifiedName, string typeName, string storageName, int slot)
+        {
+            FullClassName = fullClassName;
+            Name = name;
+            QualifiedName = qualifiedName;
+            TypeName = typeName;
+            StorageName = storageName;
+            Slot = slot;
+        }
+
+        public string FullClassName { get; }
+        public string Name { get; }
+        public string QualifiedName { get; }
+        public string TypeName { get; }
+        public string StorageName { get; }
+        public int Slot { get; }
+
+        public static UdonStaticStoreFieldRow FromQualifiedName(string qualifiedName, string typeName, string storageName, int slot)
+        {
+            int lastDot = qualifiedName.LastIndexOf('.');
+            if (lastDot < 0)
+                return new UdonStaticStoreFieldRow(string.Empty, qualifiedName, qualifiedName, typeName, storageName, slot);
+
+            return new UdonStaticStoreFieldRow(
+                qualifiedName.Substring(0, lastDot),
+                qualifiedName.Substring(lastDot + 1),
+                qualifiedName,
+                typeName,
+                storageName,
+                slot);
         }
     }
 }

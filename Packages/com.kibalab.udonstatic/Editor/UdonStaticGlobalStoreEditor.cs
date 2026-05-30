@@ -1,6 +1,4 @@
-using System;
 using System.Globalization;
-using System.IO;
 using System.Linq;
 using K13A.UdonStatic.Runtime;
 using UnityEditor;
@@ -13,6 +11,7 @@ namespace K13A.UdonStatic.Editor
     {
         private const float HeaderHeight = 20f;
         private const float RowHeight = 18f;
+        private const float MinListHeight = 220f;
         private const string WidthPrefsKey = "K13A.UdonStatic.GlobalStoreEditor.ColumnWidths";
 
         private static readonly string[] ColumnNames = { "Class", "Field", "Type", "Storage", "Slot" };
@@ -69,7 +68,7 @@ namespace K13A.UdonStatic.Editor
                 return;
             }
 
-            _scroll = EditorGUILayout.BeginScrollView(_scroll, true, true);
+            _scroll = EditorGUILayout.BeginScrollView(_scroll, true, true, GUILayout.MinHeight(MinListHeight));
             float tableWidth = UdonStaticColumnLayout.GetTotalWidth(_columnWidths);
 
             Rect headerRect = GUILayoutUtility.GetRect(tableWidth, HeaderHeight, GUILayout.ExpandWidth(false));
@@ -149,66 +148,22 @@ namespace K13A.UdonStatic.Editor
                 EditorGUI.DrawRect(rowRect, new Color(0.22f, 0.36f, 0.58f, 0.18f));
             }
 
-            DrawClickableCell(UdonStaticColumnLayout.GetColumnRect(rowRect, _columnWidths, 0), field.FullClassName, field);
-            DrawClickableCell(UdonStaticColumnLayout.GetColumnRect(rowRect, _columnWidths, 1), field.Name, field);
-            DrawClickableCell(UdonStaticColumnLayout.GetColumnRect(rowRect, _columnWidths, 2), field.TypeName, field);
-            DrawClickableCell(UdonStaticColumnLayout.GetColumnRect(rowRect, _columnWidths, 3), field.Storage.ArrayName, field);
-            DrawClickableCell(UdonStaticColumnLayout.GetColumnRect(rowRect, _columnWidths, 4), field.Slot.ToString(), field);
+            DrawCell(UdonStaticColumnLayout.GetColumnRect(rowRect, _columnWidths, 0), field.FullClassName);
+            DrawCell(UdonStaticColumnLayout.GetColumnRect(rowRect, _columnWidths, 1), field.Name);
+            DrawCell(UdonStaticColumnLayout.GetColumnRect(rowRect, _columnWidths, 2), field.TypeName);
+            DrawCell(UdonStaticColumnLayout.GetColumnRect(rowRect, _columnWidths, 3), field.Storage.ArrayName);
+            DrawCell(UdonStaticColumnLayout.GetColumnRect(rowRect, _columnWidths, 4), field.Slot.ToString());
         }
 
-        private static void DrawClickableCell(Rect cellRect, string text, StaticFieldInfo field)
+        private static void DrawCell(Rect cellRect, string text)
         {
-            EditorGUIUtility.AddCursorRect(cellRect, MouseCursor.Link);
-
-            var content = new GUIContent(text, text + "\nClick to select the declaring script.");
+            var content = new GUIContent(text, text);
             EditorGUI.LabelField(Pad(cellRect), content);
-
-            Event current = Event.current;
-            if (current.type == EventType.MouseDown && current.button == 0 && cellRect.Contains(current.mousePosition))
-            {
-                SelectScript(field);
-                current.Use();
-            }
         }
 
         private static Rect Pad(Rect rect)
         {
             return new Rect(rect.x + 4f, rect.y, Mathf.Max(0f, rect.width - 8f), rect.height);
-        }
-
-        private static void SelectScript(StaticFieldInfo field)
-        {
-            UnityEngine.Object script = LoadScriptAsset(field.FilePath);
-            if (script == null)
-            {
-                Debug.LogWarning("UdonStatic source script not found: " + field.FilePath);
-                return;
-            }
-
-            Selection.activeObject = script;
-            EditorGUIUtility.PingObject(script);
-        }
-
-        private static UnityEngine.Object LoadScriptAsset(string filePath)
-        {
-            if (string.IsNullOrEmpty(filePath))
-                return null;
-
-            string assetPath = NormalizeAssetPath(filePath);
-            return AssetDatabase.LoadAssetAtPath<UnityEngine.Object>(assetPath);
-        }
-
-        private static string NormalizeAssetPath(string filePath)
-        {
-            string path = filePath.Replace('\\', '/');
-            if (!Path.IsPathRooted(path))
-                return path;
-
-            string projectRoot = Directory.GetCurrentDirectory().Replace('\\', '/');
-            if (path.StartsWith(projectRoot + "/", StringComparison.OrdinalIgnoreCase))
-                return path.Substring(projectRoot.Length + 1);
-
-            return path;
         }
 
         private void EnsureColumnWidths()

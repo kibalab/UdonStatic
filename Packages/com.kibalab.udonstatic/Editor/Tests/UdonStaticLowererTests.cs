@@ -121,11 +121,9 @@ namespace Example
             Assert.That(catalog.Fields[0].FullClassName, Is.EqualTo("Example.TestBehaviour"));
             Assert.That(catalog.Fields[0].Name, Is.EqualTo("Enabled"));
             Assert.That(catalog.Fields[0].TypeName, Is.EqualTo("bool"));
-            Assert.That(catalog.Fields[0].FilePath, Is.EqualTo("TestBehaviour.cs"));
             Assert.That(catalog.Fields[1].FullClassName, Is.EqualTo("Example.TestBehaviour"));
             Assert.That(catalog.Fields[1].Name, Is.EqualTo("Score"));
             Assert.That(catalog.Fields[1].TypeName, Is.EqualTo("int"));
-            Assert.That(catalog.Fields[1].FilePath, Is.EqualTo("TestBehaviour.cs"));
         }
 
         [Test]

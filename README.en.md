@@ -2,202 +2,131 @@
 
 ---
 
-# VRChat VPM Package Template for KIBALAB
+# UdonStatic
 
-Template for distributing VRChat Creator Companion (VCC) / VRChat Package Manager (VPM) packages.
+## Introduction
 
-**When you push a tag (release)**, GitHub Actions automatically:
-1. Creates a Release (zip + unitypackage + package.json)
-2. Registers package information with the VPM backend
-3. Immediately reflects on [vpm.kiba.red](https://vpm.kiba.red)
+UdonStatic is an experimental extension package that lets UdonSharp code use scene-wide shared values with syntax similar to C# `static` fields.
 
----
+## Purpose
 
-## Requirements
+The goal is to share values between multiple UdonSharpBehaviour instances without manually writing a separate manager Behaviour for every shared counter, flag, timer, or object reference.
 
-### 1) Package Structure (UPM/VPM Standard)
+Example source:
 
+```csharp
+using UdonSharp;
+using UnityEngine;
+
+public class CounterExample : UdonSharpBehaviour
+{
+    private static int Counter = 0;
+    private static float ElapsedSeconds = 0f;
+
+    public int visibleCounter;
+    public float visibleElapsedSeconds;
+
+    private void Update()
+    {
+        Counter++;
+        ElapsedSeconds += Time.deltaTime;
+
+        visibleCounter = Counter;
+        visibleElapsedSeconds = ElapsedSeconds;
+    }
+}
 ```
-Packages/<PACKAGE_ID>/
-├── package.json
-├── Runtime/
-├── Editor/
-└── package-media/        # (Optional) Thumbnail image
-    └── thumbnail.png
+
+## How It Works
+
+Udon and the VRChat runtime do not expose normal CLR static memory. UdonStatic creates one scene singleton UdonBehaviour named `__UdonStaticGlobalStore` and rewrites static field declarations and accesses before UdonSharp compilation so the values are stored in typed data arrays on that singleton.
+
+For example, an access like `Counter++` is rewritten before compilation into a form like `__UdonStatic_GetStore().IntData[index]++`. Every UdonSharpBehaviour instance that refers to the same static field uses the same storage slot.
+
+## Installation
+
+Install through VCC or VPM.
+
+Install link:
+
+- https://vpm.kiba.red/
+
+Package ID:
+
+```text
+com.kibalab.udonstatic
 ```
 
-Example:
-```
-Packages/com.kibalab.mypackage/package.json
-```
-
-### 2) Required package.json Fields
+Required VPM dependency:
 
 ```json
 {
-  "name": "com.kibalab.mypackage",
-  "displayName": "My Package",
-  "version": "1.0.0",
-  "description": "Package description",
-  "author": {
-    "name": "Your Name",
-    "email": "your@email.com",
-    "url": "https://your-site.com"
-  },
   "vpmDependencies": {
-    "com.vrchat.worlds": "3.x.x"
+    "com.vrchat.worlds": ">=3.9.0"
   }
 }
 ```
 
----
+Release tags must match the `version` field in `package.json`, for example `0.1.0` or `v0.1.0`.
 
-## Setup Instructions
+## Usage And Examples
 
-### 1) Repository Variables
+Declare a normal static field inside an UdonSharpBehaviour.
 
-GitHub repository → **Settings** → **Secrets and variables** → **Actions** → **Variables**
+```csharp
+using UdonSharp;
+using UnityEngine;
 
-| Variable | Description | Example |
-|----------|-------------|---------|
-| `PACKAGE_NAME` | Package folder name | `com.kibalab.mypackage` |
-| `VPM_BACKEND_URL` | VPM backend URL | `https://vpm.kiba.red` |
+public class SharedScore : UdonSharpBehaviour
+{
+    public static int Score = 10;
+    public int visibleScore;
 
-### 2) Repository Secrets
+    private void Update()
+    {
+        Score++;
+        visibleScore = Score;
+    }
 
-GitHub repository → **Settings** → **Secrets and variables** → **Actions** → **Secrets**
-
-| Secret | Description |
-|--------|-------------|
-| `VPM_API_KEY` | VPM backend API key (contact admin) |
-
----
-
-## Usage
-
-### Creating a New Package
-
-1. Create a new repository using **Use this template**
-2. Create a folder under `Packages/` with your package ID
-3. Write `package.json`
-4. Configure Repository Variables/Secrets
-
-### Deploying a Release
-
-1. Update `version` in `package.json`
-2. Commit & push
-3. Create and push a tag with the same version
-
-```bash
-# After updating version, commit
-git add Packages/com.kibalab.mypackage/package.json
-git commit -m "Bump version to 1.0.1"
-git push
-
-# Create and push tag
-git tag 1.0.1
-git push origin 1.0.1
+    public override void Interact()
+    {
+        SharedScore.Score = 0;
+    }
+}
 ```
 
-> Tag version must match package.json version. (Both `v1.0.1` and `1.0.1` formats supported)
+During compilation, UdonStatic removes the static field declaration and rewrites all accesses to array slots on the scene `__UdonStaticGlobalStore` object.
 
----
+Supported storage types:
 
-## Thumbnail Image
+- `int`, `float`, `bool`, `string`
+- `long`, `double`
+- `Vector2`, `Vector3`, `Quaternion`, `Color`
+- `GameObject`, `Transform`, `UnityEngine.Object`
 
-You can set a thumbnail to be displayed on the VPM frontend.
+Included example:
 
-### Method 1: Package Thumbnail (Recommended)
-```
-Packages/<PACKAGE_ID>/package-media/thumbnail.png
-```
+- `Packages/com.kibalab.udonstatic/Examples/UdonStaticCounterExample.cs`
 
-### Method 2: Repository Root Thumbnail
-```
-.github/vpm-thumbnail.png
-```
+## Notes And Limitations
 
-**Recommended Specifications:**
-- Format: PNG
-- Size: 512x512 or 16:9 ratio
-- File size: Under 500KB
+- This is an emulation layer on top of one UdonBehaviour heap, not native CLR static memory.
+- Storage is scene-local. Cross-scene persistence is not provided.
+- Static constructors, static properties, events, generic static fields, and complex initialization order are not supported yet.
+- The main supported target is simple static fields declared inside `UdonSharpBehaviour` classes.
+- Static field initializers are handled for literals and a few Unity default values. Complex initializers may be synchronized as the type default value.
+- The package extends UdonSharp compiler internals through Harmony patches, so compatibility should be checked after VRChat SDK or UdonSharp updates.
 
----
+## Contribute
 
-## Workflow Structure
+Bug reports, minimal reproduction projects, VRChat SDK version information, and Unity Console logs are welcome.
 
-### Reusable Workflow (Centrally Managed)
+When contributing:
 
-All package repos reference workflows from `vpm-package-template`.
-Modifying the central workflow **automatically applies to all package repos**.
+- Keep package changes under `Packages/com.kibalab.udonstatic` whenever possible.
+- Add lowerer tests under `Editor/Tests` for new syntax support when practical.
+- For UdonSharp compiler fixes, verify the change in an actual Unity project with an UdonSharp compile.
 
-```
-vpm-package-template/.github/workflows/
-├── vpm-release.yml    # Reusable workflow (actual logic)
-└── release.yml        # Usage example
+README and release documentation are kept aligned during review.
 
-Each package repo/.github/workflows/
-└── release.yml        # Calls central workflow (16 lines)
-```
-
-### release.yml in Each Package Repo
-
-```yaml
-name: Build Release
-
-on:
-  workflow_dispatch:
-  push:
-    tags:
-      - '*'
-
-permissions:
-  contents: write
-
-jobs:
-  release:
-    uses: kibalab/vpm-package-template/.github/workflows/vpm-release.yml@main
-    with:
-      package_name: ${{ vars.PACKAGE_NAME }}
-      vpm_backend_url: ${{ vars.VPM_BACKEND_URL || 'https://vpm.kiba.red' }}
-    secrets:
-      VPM_API_KEY: ${{ secrets.VPM_API_KEY }}
-```
-
-### Workflow Process
-
-1. **Build**
-   - Compress `Packages/<PACKAGE_NAME>` folder to ZIP
-   - Generate `.unitypackage` file
-
-2. **Create GitHub Release**
-   - Attach ZIP, unitypackage, package.json
-
-3. **Register with VPM Backend**
-   - Send package information to backend API
-   - Automatically detect and register thumbnail URL
-
----
-
-## Troubleshooting
-
-### Workflow Failed: "Tag does not match version"
-- Check that `package.json` `version` matches Git tag
-- Tags can be in `1.0.0` or `v1.0.0` format
-
-### Package Not Showing in Listing
-- Check backend response in GitHub Actions logs
-- Verify `VPM_BACKEND_URL` and `VPM_API_KEY` settings
-- Contact backend admin about API key validity
-
-### Thumbnail Not Displayed
-- Verify file path is correct
-- Check that image is pushed to `main` branch
-- Verify Raw URL is accessible
-
----
-
-## Related Links
-
-- [VPM Package Listing](https://vpm.kiba.red)
-- [Add to VCC](https://vpm.kiba.red/vcc)
+To release, bump `version` in `package.json` and push a Git tag with the same version. GitHub Actions will generate the VPM release artifacts.

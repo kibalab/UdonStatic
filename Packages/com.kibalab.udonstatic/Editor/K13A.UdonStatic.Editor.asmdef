@@ -1,0 +1,25 @@
+{
+  "name": "K13A.UdonStatic.Editor",
+  "rootNamespace": "K13A.UdonStatic.Editor",
+  "references": [
+    "UdonSharp.Editor",
+    "UdonSharp.Runtime",
+    "K13A.UdonStatic.Runtime"
+  ],
+  "includePlatforms": [
+    "Editor"
+  ],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": true,
+  "precompiledReferences": [
+    "Microsoft.CodeAnalysis.dll",
+    "Microsoft.CodeAnalysis.CSharp.dll",
+    "System.Collections.Immutable.dll",
+    "0Harmony.dll"
+  ],
+  "autoReferenced": true,
+  "defineConstraints": [],
+  "versionDefines": [],
+  "noEngineReferences": false
+}

@@ -1,0 +1,23 @@
+{
+  "name": "K13A.UdonStatic.Editor.Tests",
+  "rootNamespace": "K13A.UdonStatic.Editor.Tests",
+  "references": [
+    "K13A.UdonStatic.Editor",
+    "UdonSharp.Editor",
+    "UnityEngine.TestRunner",
+    "UnityEditor.TestRunner"
+  ],
+  "includePlatforms": [
+    "Editor"
+  ],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": true,
+  "precompiledReferences": [
+    "nunit.framework.dll"
+  ],
+  "autoReferenced": false,
+  "defineConstraints": [],
+  "versionDefines": [],
+  "noEngineReferences": false
+}

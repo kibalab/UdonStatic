@@ -1,0 +1,26 @@
+{
+  "name": "com.kibalab.udonstatic",
+  "displayName": "UdonStatic",
+  "version": "0.1.0",
+  "unity": "2022.3",
+  "description": "Experimental UdonSharp compiler extension that lowers simple static fields before UdonSharp compilation.",
+  "license": "MIT",
+  "keywords": [
+    "vrchat",
+    "vpm",
+    "udon",
+    "udonsharp",
+    "static"
+  ],
+  "gitDependencies": {},
+  "vpmDependencies": {
+    "com.vrchat.worlds": ">=3.9.0"
+  },
+  "author": {
+    "name": "KIBA_",
+    "email": "root@kiba.red",
+    "url": "https://vpm.kiba.red"
+  },
+  "legacyFolders": {},
+  "legacyFiles": {}
+}

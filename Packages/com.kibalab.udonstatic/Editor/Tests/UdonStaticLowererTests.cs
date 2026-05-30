@@ -177,7 +177,7 @@ namespace Example
                 Assert.That(width, Is.GreaterThanOrEqualTo(UdonStaticColumnLayout.MinDrawColumnWidth));
             }
 
-            Assert.That(UdonStaticColumnLayout.GetTotalWidth(drawWidths), Is.LessThanOrEqualTo(availableWidth).Within(0.001f));
+            Assert.That(UdonStaticColumnLayout.GetTotalWidth(drawWidths), Is.LessThanOrEqualTo(availableWidth + 0.001f));
         }
 
         [Test]
@@ -193,7 +193,7 @@ namespace Example
                 Assert.That(width, Is.GreaterThan(0f));
             }
 
-            Assert.That(UdonStaticColumnLayout.GetTotalWidth(drawWidths), Is.LessThanOrEqualTo(availableWidth).Within(0.001f));
+            Assert.That(UdonStaticColumnLayout.GetTotalWidth(drawWidths), Is.LessThanOrEqualTo(availableWidth + 0.001f));
         }
 
         [Test]

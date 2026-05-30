@@ -22,6 +22,7 @@ namespace K13A.UdonStatic.Editor
 
         private IReadOnlyList<UdonStaticStoreFieldRow> _rows;
         private float[] _columnWidths;
+        private float[] _drawColumnWidths;
         private int _resizingColumn = -1;
         private float _resizeStartX;
         private float _resizeStartWidth;
@@ -70,14 +71,14 @@ namespace K13A.UdonStatic.Editor
                 return;
             }
 
-            float tableWidth = UdonStaticColumnLayout.GetTotalWidth(_columnWidths);
+            Rect tableRect = EditorGUILayout.GetControlRect(false, HeaderHeight);
+            _drawColumnWidths = UdonStaticColumnLayout.GetDrawWidths(_columnWidths, tableRect.width);
 
-            Rect headerRect = GUILayoutUtility.GetRect(tableWidth, HeaderHeight, GUILayout.ExpandWidth(false));
-            DrawHeader(headerRect);
+            DrawHeader(tableRect);
 
             foreach (var field in _rows.OrderBy(static field => field.QualifiedName))
             {
-                Rect rowRect = GUILayoutUtility.GetRect(tableWidth, RowHeight, GUILayout.ExpandWidth(false));
+                Rect rowRect = EditorGUILayout.GetControlRect(false, RowHeight);
                 DrawFieldRow(rowRect, field);
             }
 
@@ -98,7 +99,7 @@ namespace K13A.UdonStatic.Editor
         {
             for (var i = 0; i < ColumnNames.Length; i++)
             {
-                Rect cellRect = UdonStaticColumnLayout.GetColumnRect(rowRect, _columnWidths, i);
+                Rect cellRect = UdonStaticColumnLayout.GetColumnRect(rowRect, _drawColumnWidths, i);
                 GUI.Label(cellRect, ColumnNames[i], EditorStyles.toolbarButton);
 
                 if (i < ColumnNames.Length - 1)
@@ -112,7 +113,7 @@ namespace K13A.UdonStatic.Editor
 
         private void DrawSplitter(Rect rowRect, int column)
         {
-            Rect splitterRect = UdonStaticColumnLayout.GetSplitterRect(rowRect, _columnWidths, column);
+            Rect splitterRect = UdonStaticColumnLayout.GetSplitterRect(rowRect, _drawColumnWidths, column);
             EditorGUIUtility.AddCursorRect(splitterRect, MouseCursor.ResizeHorizontal);
 
             Event current = Event.current;
@@ -153,11 +154,11 @@ namespace K13A.UdonStatic.Editor
                 EditorGUI.DrawRect(rowRect, new Color(0.22f, 0.36f, 0.58f, 0.18f));
             }
 
-            DrawCell(UdonStaticColumnLayout.GetColumnRect(rowRect, _columnWidths, 0), field.FullClassName);
-            DrawCell(UdonStaticColumnLayout.GetColumnRect(rowRect, _columnWidths, 1), field.Name);
-            DrawCell(UdonStaticColumnLayout.GetColumnRect(rowRect, _columnWidths, 2), field.TypeName);
-            DrawCell(UdonStaticColumnLayout.GetColumnRect(rowRect, _columnWidths, 3), field.StorageName);
-            DrawCell(UdonStaticColumnLayout.GetColumnRect(rowRect, _columnWidths, 4), field.Slot.ToString());
+            DrawCell(UdonStaticColumnLayout.GetColumnRect(rowRect, _drawColumnWidths, 0), field.FullClassName);
+            DrawCell(UdonStaticColumnLayout.GetColumnRect(rowRect, _drawColumnWidths, 1), field.Name);
+            DrawCell(UdonStaticColumnLayout.GetColumnRect(rowRect, _drawColumnWidths, 2), field.TypeName);
+            DrawCell(UdonStaticColumnLayout.GetColumnRect(rowRect, _drawColumnWidths, 3), field.StorageName);
+            DrawCell(UdonStaticColumnLayout.GetColumnRect(rowRect, _drawColumnWidths, 4), field.Slot.ToString());
         }
 
         private static void DrawCell(Rect cellRect, string text)
@@ -236,6 +237,18 @@ namespace K13A.UdonStatic.Editor
         public static void ApplyResize(float[] columnWidths, int column, float delta)
         {
             columnWidths[column] = Mathf.Max(MinColumnWidth, columnWidths[column] + delta);
+        }
+
+        public static float[] GetDrawWidths(float[] columnWidths, float availableWidth)
+        {
+            float[] drawWidths = columnWidths.ToArray();
+            float extraWidth = availableWidth - GetTotalWidth(drawWidths);
+            if (extraWidth > 0f && drawWidths.Length > 0)
+            {
+                drawWidths[drawWidths.Length - 1] += extraWidth;
+            }
+
+            return drawWidths;
         }
 
         public static float GetTotalWidth(float[] columnWidths)

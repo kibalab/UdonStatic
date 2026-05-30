@@ -152,6 +152,19 @@ namespace Example
         }
 
         [Test]
+        public void ColumnLayoutExpandsLastColumnToFillAvailableWidth()
+        {
+            var widths = new[] { 100f, 50f };
+            float availableWidth = UdonStaticColumnLayout.GetTotalWidth(widths) + 80f;
+
+            float[] drawWidths = UdonStaticColumnLayout.GetDrawWidths(widths, availableWidth);
+
+            Assert.That(drawWidths[0], Is.EqualTo(100f).Within(0.001f));
+            Assert.That(drawWidths[1], Is.EqualTo(130f).Within(0.001f));
+            Assert.That(UdonStaticColumnLayout.GetTotalWidth(drawWidths), Is.EqualTo(availableWidth).Within(0.001f));
+        }
+
+        [Test]
         public void StoreFieldRowSplitsQualifiedNameForInspector()
         {
             UdonStaticStoreFieldRow row = UdonStaticStoreFieldRow.FromQualifiedName(

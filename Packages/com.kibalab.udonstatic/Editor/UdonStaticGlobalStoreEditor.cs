@@ -14,7 +14,6 @@ namespace K13A.UdonStatic.Editor
     {
         private const float HeaderHeight = 20f;
         private const float RowHeight = 18f;
-        private const float MinListHeight = 220f;
         private const string WidthPrefsKey = "K13A.UdonStatic.GlobalStoreEditor.ColumnWidths";
 
         private static readonly string[] ColumnNames = { "Class", "Field", "Type", "Storage", "Slot" };
@@ -82,11 +81,6 @@ namespace K13A.UdonStatic.Editor
                 DrawFieldRow(rowRect, field);
             }
 
-            float usedHeight = HeaderHeight + _rows.Count * RowHeight;
-            if (usedHeight < MinListHeight)
-            {
-                GUILayout.Space(MinListHeight - usedHeight);
-            }
         }
 
         private void RefreshRows()

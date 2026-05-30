@@ -1,4 +1,6 @@
 using NUnit.Framework;
+using K13A.UdonStatic.Runtime;
+using UnityEngine;
 
 namespace K13A.UdonStatic.Editor.Tests
 {
@@ -93,6 +95,52 @@ public class SecondBehaviour : UdonSharpBehaviour
 
             Assert.That(result.Changed, Is.True);
             Assert.That(result.Source, Does.Contain("Visible = __UdonStatic_GetStore().IntData[0];"));
+        }
+
+        [Test]
+        public void CatalogKeepsClassFieldAndTypeForInspector()
+        {
+            const string source = @"
+using UdonSharp;
+
+namespace Example
+{
+    public class TestBehaviour : UdonSharpBehaviour
+    {
+        public static int Score = 5;
+        private static bool Enabled = true;
+    }
+}";
+
+            StaticFieldCatalog catalog = StaticFieldCatalog.Collect(new[]
+            {
+                new UdonStaticSource(source, "TestBehaviour.cs")
+            });
+
+            Assert.That(catalog.Count, Is.EqualTo(2));
+            Assert.That(catalog.Fields[0].FullClassName, Is.EqualTo("Example.TestBehaviour"));
+            Assert.That(catalog.Fields[0].Name, Is.EqualTo("Enabled"));
+            Assert.That(catalog.Fields[0].TypeName, Is.EqualTo("bool"));
+            Assert.That(catalog.Fields[1].FullClassName, Is.EqualTo("Example.TestBehaviour"));
+            Assert.That(catalog.Fields[1].Name, Is.EqualTo("Score"));
+            Assert.That(catalog.Fields[1].TypeName, Is.EqualTo("int"));
+        }
+
+        [Test]
+        public void GlobalStoreSerializedStorageFieldsAreHiddenInInspector()
+        {
+            var fields = typeof(UdonStaticGlobalStore).GetFields();
+
+            foreach (var field in fields)
+            {
+                if (!field.Name.EndsWith("Keys") && !field.Name.EndsWith("Data"))
+                    continue;
+
+                Assert.That(
+                    field.GetCustomAttributes(typeof(HideInInspector), false),
+                    Is.Not.Empty,
+                    field.Name + " must not expose serialized defaults in the inspector");
+            }
         }
 
         [Test]

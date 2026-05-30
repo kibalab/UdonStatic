@@ -3,6 +3,7 @@
   "rootNamespace": "K13A.UdonStatic.Editor.Tests",
   "references": [
     "K13A.UdonStatic.Editor",
+    "K13A.UdonStatic.Runtime",
     "UdonSharp.Editor",
     "UnityEngine.TestRunner",
     "UnityEditor.TestRunner"

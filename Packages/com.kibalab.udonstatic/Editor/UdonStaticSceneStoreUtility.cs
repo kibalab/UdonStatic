@@ -25,8 +25,12 @@ namespace K13A.UdonStatic.Editor
 
         public static void SyncFromProjectSources()
         {
-            var catalog = StaticFieldCatalog.Collect(FindProjectSources());
-            SyncStore(catalog);
+            SyncStore(CollectProjectCatalog());
+        }
+
+        public static StaticFieldCatalog CollectProjectCatalog()
+        {
+            return StaticFieldCatalog.Collect(FindProjectSources());
         }
 
         [MenuItem("K13A/UdonStatic/Sync Global Store")]
@@ -141,28 +145,12 @@ namespace K13A.UdonStatic.Editor
                 .OrderBy(static field => field.Slot)
                 .ToArray();
 
-            var oldKeys = keyField.GetValue(store) as string[] ?? Array.Empty<string>();
-            var oldData = dataField.GetValue(store) as Array;
-            var existing = new Dictionary<string, object>();
-
-            if (oldData != null)
-            {
-                for (var i = 0; i < oldKeys.Length && i < oldData.Length; i++)
-                {
-                    existing[oldKeys[i]] = oldData.GetValue(i);
-                }
-            }
-
             var keys = fields.Select(static field => field.QualifiedName).ToArray();
             var data = Array.CreateInstance(elementType, fields.Length);
 
             for (var i = 0; i < fields.Length; i++)
             {
-                var value = existing.TryGetValue(fields[i].QualifiedName, out var existingValue)
-                    ? existingValue
-                    : EvaluateInitializer(fields[i], elementType);
-
-                data.SetValue(value, i);
+                data.SetValue(EvaluateInitializer(fields[i], elementType), i);
             }
 
             keyField.SetValue(store, keys);

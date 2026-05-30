@@ -180,6 +180,7 @@ namespace K13A.UdonStatic.Editor
                     pending.TypeName,
                     pending.Storage,
                     slot,
+                    pending.FilePath,
                     pending.Initializer));
             }
 
@@ -251,6 +252,7 @@ namespace K13A.UdonStatic.Editor
             string typeName,
             StorageKind storage,
             int slot,
+            string filePath,
             ExpressionSyntax initializer)
         {
             ClassName = className;
@@ -260,6 +262,7 @@ namespace K13A.UdonStatic.Editor
             TypeName = typeName;
             Storage = storage;
             Slot = slot;
+            FilePath = filePath ?? string.Empty;
             Initializer = initializer;
         }
 
@@ -270,6 +273,7 @@ namespace K13A.UdonStatic.Editor
         public string TypeName { get; }
         public StorageKind Storage { get; }
         public int Slot { get; }
+        public string FilePath { get; }
         public ExpressionSyntax Initializer { get; }
     }
 

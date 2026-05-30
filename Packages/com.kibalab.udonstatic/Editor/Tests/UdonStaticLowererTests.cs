@@ -121,9 +121,36 @@ namespace Example
             Assert.That(catalog.Fields[0].FullClassName, Is.EqualTo("Example.TestBehaviour"));
             Assert.That(catalog.Fields[0].Name, Is.EqualTo("Enabled"));
             Assert.That(catalog.Fields[0].TypeName, Is.EqualTo("bool"));
+            Assert.That(catalog.Fields[0].FilePath, Is.EqualTo("TestBehaviour.cs"));
             Assert.That(catalog.Fields[1].FullClassName, Is.EqualTo("Example.TestBehaviour"));
             Assert.That(catalog.Fields[1].Name, Is.EqualTo("Score"));
             Assert.That(catalog.Fields[1].TypeName, Is.EqualTo("int"));
+            Assert.That(catalog.Fields[1].FilePath, Is.EqualTo("TestBehaviour.cs"));
+        }
+
+        [Test]
+        public void ColumnLayoutUsesSameConfiguredWidthsForHeaderAndRows()
+        {
+            var widths = new[] { 320f, 140f, 100f };
+            var header = new Rect(10f, 20f, 600f, 18f);
+            var row = new Rect(10f, 42f, 600f, 18f);
+
+            Rect headerColumn = UdonStaticColumnLayout.GetColumnRect(header, widths, 1);
+            Rect rowColumn = UdonStaticColumnLayout.GetColumnRect(row, widths, 1);
+
+            Assert.That(headerColumn.x, Is.EqualTo(rowColumn.x).Within(0.001f));
+            Assert.That(headerColumn.width, Is.EqualTo(140f).Within(0.001f));
+            Assert.That(rowColumn.width, Is.EqualTo(140f).Within(0.001f));
+        }
+
+        [Test]
+        public void ColumnResizeClampsToMinimumWidth()
+        {
+            var widths = new[] { 100f, 100f };
+
+            UdonStaticColumnLayout.ApplyResize(widths, 0, -1000f);
+
+            Assert.That(widths[0], Is.EqualTo(UdonStaticColumnLayout.MinColumnWidth).Within(0.001f));
         }
 
         [Test]
